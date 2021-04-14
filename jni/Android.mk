@@ -16,8 +16,17 @@ LOCAL_SRC_FILES:= \
     com_android_bluetooth_gatt.cpp \
     com_android_bluetooth_sdp.cpp
 
+ifeq ($(BOARD_HAVE_BLUETOOTH_RTK),true)
+LOCAL_CFLAGS += \
+    -DBLUETOOTH_RTK \
+    -DBLUETOOTH_RTK_API
+LOCAL_SRC_FILES += \
+    com_android_bluetooth_rtkbt.cpp
+endif
+
 LOCAL_C_INCLUDES += \
     $(JNI_H_INCLUDE) \
+    $(TOP)/hardware/aw/bluetooth/libaw/include
 
 LOCAL_SHARED_LIBRARIES := \
     libandroid_runtime \
@@ -26,6 +35,8 @@ LOCAL_SHARED_LIBRARIES := \
     libutils \
     liblog \
     libhardware
+
+LOCAL_STATIC_LIBRARIES += libbt-aw libwifi_hardware_info
 
 LOCAL_MULTILIB := 32
 

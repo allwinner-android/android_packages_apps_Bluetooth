@@ -289,6 +289,7 @@ public final class Avrcp {
                 if (DEBUG) Log.v(TAG, "MESSAGE_GET_RC_FEATURES: address="+address+
                                                              ", features="+msg.arg1);
                 mFeatures = msg.arg1;
+                mFeatures &= ~BTRC_FEAT_ABSOLUTE_VOLUME;
                 mFeatures = modifyRcFeatureFromBlacklist(mFeatures, address);
                 mAudioManager.avrcpSupportsAbsoluteVolume(address, isAbsoluteVolumeSupported());
                 mLastLocalVolume = -1;

@@ -23,6 +23,10 @@
 #include "android_runtime/AndroidRuntime.h"
 #include "android_runtime/Log.h"
 
+extern "C" {
+#include "module_info.h"
+}
+
 #include <string.h>
 #include <pthread.h>
 
@@ -632,7 +636,7 @@ static bt_os_callouts_t sBluetoothOsCallouts = {
 
 
 static void classInitNative(JNIEnv* env, jclass clazz) {
-    int err;
+    int err = -1;
     hw_module_t* module;
 
 
@@ -676,9 +680,18 @@ static void classInitNative(JNIEnv* env, jclass clazz) {
     char value[PROPERTY_VALUE_MAX];
     property_get("bluetooth.mock_stack", value, "");
 
-    const char *id = (strcmp(value, "1")? BT_STACK_MODULE_ID : BT_STACK_TEST_MODULE_ID);
-
-    err = hw_get_module(id, (hw_module_t const**)&module);
+    const char *id = BT_STACK_MODULE_ID;
+    aw_get_wifi_module_info();
+    if (module_info.vendor_id == 0) {
+        ALOGI("use bluetooth.%s.default.so", BT_HARDWARE_BCM_MODULE_ID);
+        err = hw_get_module_by_class(BT_STACK_MODULE_ID, BT_HARDWARE_BCM_MODULE_ID, (hw_module_t const**)&module);
+    } else if (module_info.vendor_id == 1) {
+        ALOGI("use bluetooth.%s.default.so", BT_HARDWARE_RTK_MODULE_ID);
+        err = hw_get_module_by_class(BT_STACK_MODULE_ID, BT_HARDWARE_RTK_MODULE_ID, (hw_module_t const**)&module);
+    } else if (module_info.vendor_id == 2) {
+        ALOGI("use bluetooth.%s.default.so", BT_HARDWARE_USB_MODULE_ID);
+        err = hw_get_module_by_class(BT_STACK_MODULE_ID, BT_HARDWARE_USB_MODULE_ID, (hw_module_t const**)&module);
+    }
 
     if (err == 0) {
         hw_device_t* abstraction;
@@ -1383,5 +1396,11 @@ jint JNI_OnLoad(JavaVM *jvm, void *reserved)
         return JNI_ERR;
     }
 
+#ifdef BLUETOOTH_RTK_API
+    if ((status = android::register_com_android_bluetooth_rtkbt(e)) < 0) {
+        ALOGE("jni rtkbt registration failure: %d", status);
+        return JNI_ERR;
+    }
+#endif
     return JNI_VERSION_1_6;
 }

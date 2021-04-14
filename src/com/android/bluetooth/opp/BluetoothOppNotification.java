@@ -503,6 +503,9 @@ class BluetoothOppNotification {
           Intent baseIntent = new Intent().setDataAndNormalize(contentUri)
               .setClassName(Constants.THIS_PACKAGE_NAME, BluetoothOppReceiver.class.getName());
 
+          Intent i = new Intent(baseIntent).setAction(Constants.ACTION_INCOMING_FILE_CONFIRM);
+          Log.v(TAG, "sent file confirm intent...");
+          mContext.sendBroadcast(i);
           Notification n = new Notification.Builder(mContext)
               .setOnlyAlertOnce(true)
               .setOngoing(true)

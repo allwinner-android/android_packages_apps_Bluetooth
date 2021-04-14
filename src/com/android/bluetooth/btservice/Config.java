@@ -41,6 +41,7 @@ import com.android.bluetooth.gatt.GattService;
 import com.android.bluetooth.map.BluetoothMapService;
 import com.android.bluetooth.sap.SapService;
 import com.android.bluetooth.pbapclient.PbapClientService;
+import com.android.bluetooth.rtkbt.RtkbtService;
 
 public class Config {
     private static final String TAG = "AdapterServiceConfig";
@@ -51,6 +52,7 @@ public class Config {
     //Do not inclue OPP and PBAP, because their services
     //are not managed by AdapterService
     private static final Class[] PROFILE_SERVICES = {
+        //RtkbtService.class,
         HeadsetService.class,
         A2dpService.class,
         A2dpSinkService.class,
@@ -68,6 +70,7 @@ public class Config {
      * Resource flag to indicate whether profile is supported or not.
      */
     private static final int[]  PROFILE_SERVICES_FLAG = {
+        //R.bool.profile_supported_rtkbt,
         R.bool.profile_supported_hs_hfp,
         R.bool.profile_supported_a2dp,
         R.bool.profile_supported_a2dp_sink,
@@ -84,6 +87,8 @@ public class Config {
 
     private static Class[] SUPPORTED_PROFILES = new Class[0];
 
+    private static String[] rtkModuleList = {"rtl8723bs", "rtl8723bu"};
+
     static void init(Context ctx) {
         if (ctx == null) {
             return;
@@ -93,7 +98,11 @@ public class Config {
             return;
         }
 
-        ArrayList<Class> profiles = new ArrayList<Class>(PROFILE_SERVICES.length);
+        ArrayList<Class> profiles = new ArrayList<Class>(PROFILE_SERVICES.length + 1);
+        if (supportRtkbtService()) {
+            Log.d(TAG, "Adding " + RtkbtService.class.getSimpleName());
+            profiles.add(RtkbtService.class);
+        }
         for (int i=0; i < PROFILE_SERVICES_FLAG.length; i++) {
             boolean supported = resources.getBoolean(PROFILE_SERVICES_FLAG[i]);
             if (supported && !isProfileDisabled(ctx, PROFILE_SERVICES[i])) {
@@ -150,5 +159,21 @@ public class Config {
         long profileBit = 1 << profileIndex;
 
         return (disabledProfilesBitMask & profileBit) != 0;
+    }
+
+    static boolean supportRtkbtService() {
+        String str = SystemProperties.get("wlan.hardware.info", "null");
+
+        if ((str != null) && (!str.equals("null"))) {
+            String[] val = str.split(":");
+            if ((val != null) && (val.length > 1) && (val[1] != null)) {
+                for (String s : rtkModuleList) {
+                    if ((val[1]).equals(s)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 }

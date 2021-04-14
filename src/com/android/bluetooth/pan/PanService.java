@@ -57,7 +57,7 @@ import java.util.Map;
  */
 public class PanService extends ProfileService {
     private static final String TAG = "PanService";
-    private static final boolean DBG = false;
+    private static final boolean DBG = true;
 
     private static final String BLUETOOTH_IFACE_ADDR_START= "192.168.44.1";
     private static final int BLUETOOTH_MAX_PAN_CONNECTIONS = 5;
