@@ -243,6 +243,9 @@ public class BluetoothOppService extends ProfileService implements IObexConnecti
         }
         setBluetoothOppService(null);
         mHandler.sendMessage(mHandler.obtainMessage(STOP_LISTENER));
+        ///AW CODE: [feat] clear BluetoothOppNotification
+        mNotifier.clear();
+        ///AW: add end
         return true;
     }
 

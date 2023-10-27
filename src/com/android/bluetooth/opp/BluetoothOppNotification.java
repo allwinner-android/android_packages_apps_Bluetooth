@@ -47,6 +47,11 @@ import android.os.Message;
 import android.os.Process;
 import android.text.format.Formatter;
 import android.util.Log;
+import android.bluetooth.BluetoothDevice;
+import android.os.SystemProperties;
+import android.content.BroadcastReceiver;
+import android.content.IntentFilter;
+import android.content.ComponentName;
 
 import com.android.bluetooth.R;
 import com.android.bluetooth.Utils;
@@ -119,6 +124,37 @@ class BluetoothOppNotification {
 
     private ContentResolver mContentResolver = null;
 
+    ///AW CODE: [feat] add BroadcastReceiver for INCOMINGFILE
+    public final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (V) {
+                Log.d(TAG, "onReceive. Broadcast Intent = " + intent.toString());
+            }
+            if (BluetoothDevice.ACTION_INCOMINGFILE_CONFIRM_ACCEPT.equals(action)) {
+                Cursor cursor = mContentResolver.query(BluetoothShare.CONTENT_URI, null,
+                                         WHERE_CONFIRM_PENDING, null, BluetoothShare._ID);
+                if (cursor == null) {
+                    return;
+                }
+                for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
+                    BluetoothOppTransferInfo info = new BluetoothOppTransferInfo();
+                    BluetoothOppUtility.fillRecord(mContext, cursor, info);
+                    Uri contentUri = Uri.parse(BluetoothShare.CONTENT_URI + "/" + info.mID);
+                    Intent baseIntent = new Intent().setDataAndNormalize(contentUri)
+                        .setClassName(Constants.THIS_PACKAGE_NAME,
+                                BluetoothOppReceiver.class.getName());
+                    //accept transfer file
+                    Intent mIntent = new Intent(baseIntent).setAction(Constants.ACTION_ACCEPT);
+                    mContext.sendBroadcast(mIntent);
+                }
+                cursor.close();
+            }
+        }
+    };
+    ///AW: add end
+
     /**
      * This inner class is used to describe some properties for one transfer.
      */
@@ -159,6 +195,12 @@ class BluetoothOppNotification {
         mNotifications = new HashMap<String, NotificationItem>();
         // Get Content Resolver object one time
         mContentResolver = mContext.getContentResolver();
+
+        ///AW CODE: [feat] add INCOMINGFILE_CONFIRM_ACCEPT action
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_INCOMINGFILE_CONFIRM_ACCEPT);
+        mContext.registerReceiver(mReceiver, filter);
+        ///AW: add end
     }
 
     /**
@@ -647,7 +689,16 @@ class BluetoothOppNotification {
                             .setVisibility(Notification.VISIBILITY_PRIVATE)
                             .setPublicVersion(public_n)
                             .build();
-            mNotificationMgr.notify(NOTIFICATION_ID_PROGRESS, n);
+            ///AW CODE: [feat] send BluetoothIncomingFileRequest broadcast
+            if ("homlet".equals(SystemProperties.get("ro.product.platform", null)) ||
+                "homlet".equals(SystemProperties.get("ro.build.characteristics", null))) {
+                Intent intent = new Intent().setAction(BluetoothDevice.ACTION_INCOMINGFILE_REQUEST);
+                intent.setComponent(new ComponentName("android","com.android.server.BluetoothIncomingFileRequest"));
+                mContext.sendBroadcast(intent);
+            } else {
+                mNotificationMgr.notify(NOTIFICATION_ID_PROGRESS, n);
+            }
+            ///AW: add end
         }
         cursor.close();
     }
@@ -659,4 +710,12 @@ class BluetoothOppNotification {
         mHandler.removeCallbacksAndMessages(null);
         mNotificationMgr.cancelAll();
     }
+    ///AW CODE: [feat] unregister INCOMINGFILE receiver
+    void clear(){
+        if (V) {
+            Log.v(TAG, "clear!");
+        }
+        mContext.unregisterReceiver(mReceiver);
+    }
+    ///AW: add end
 }
